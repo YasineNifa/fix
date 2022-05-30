@@ -9,12 +9,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/cmd/cancel"
-	configcmd "sylr.dev/fix/cmd/config"
-	"sylr.dev/fix/cmd/database"
+	initcmd "sylr.dev/fix/cmd/init"
 	"sylr.dev/fix/cmd/initiator"
 	"sylr.dev/fix/cmd/list"
 	"sylr.dev/fix/cmd/marketdata"
 	"sylr.dev/fix/cmd/new"
+	"sylr.dev/fix/cmd/status"
 	"sylr.dev/fix/config"
 )
 
@@ -33,13 +33,13 @@ var FixCmd = &cobra.Command{
 func init() {
 	options := config.GetOptions()
 
-	FixCmd.AddCommand(configcmd.ConfigCmd)
-	FixCmd.AddCommand(database.DatabaseCmd)
-	FixCmd.AddCommand(new.NewCmd)
-	FixCmd.AddCommand(marketdata.MarketDataCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
-	FixCmd.AddCommand(list.ListCmd)
+	FixCmd.AddCommand(initcmd.InitCmd)
 	FixCmd.AddCommand(initiator.InitiatorCmd)
+	FixCmd.AddCommand(list.ListCmd)
+	FixCmd.AddCommand(marketdata.MarketDataCmd)
+	FixCmd.AddCommand(new.NewCmd)
+	FixCmd.AddCommand(status.StatusCmd)
 
 	configPath := strings.Join([]string{"$HOME", ".fix", "config"}, string(os.PathSeparator))
 

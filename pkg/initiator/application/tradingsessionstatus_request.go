@@ -11,8 +11,8 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
-func NewNewOrder() *NewOrder {
-	sod := NewOrder{
+func NewTradingSessionStatusRequest() *TradingSessionStatusRequest {
+	sod := TradingSessionStatusRequest{
 		Connected:     make(chan interface{}),
 		FromAdminChan: make(chan *quickfix.Message),
 		FromAppChan:   make(chan *quickfix.Message),
@@ -21,7 +21,7 @@ func NewNewOrder() *NewOrder {
 	return &sod
 }
 
-type NewOrder struct {
+type TradingSessionStatusRequest struct {
 	utils.QuickFixAppMessageLogger
 
 	Settings *quickfix.Settings
@@ -33,19 +33,19 @@ type NewOrder struct {
 }
 
 // Notification of a session begin created.
-func (app *NewOrder) OnCreate(sessionID quickfix.SessionID) {
+func (app *TradingSessionStatusRequest) OnCreate(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("New session: %s", sessionID)
 }
 
 // Notification of a session successfully logging on.
-func (app *NewOrder) OnLogon(sessionID quickfix.SessionID) {
+func (app *TradingSessionStatusRequest) OnLogon(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logon: %s", sessionID)
 
 	app.Connected <- struct{}{}
 }
 
 // Notification of a session logging off or disconnecting.
-func (app *NewOrder) OnLogout(sessionID quickfix.SessionID) {
+func (app *TradingSessionStatusRequest) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
@@ -54,7 +54,7 @@ func (app *NewOrder) OnLogout(sessionID quickfix.SessionID) {
 }
 
 // Notification of admin message being sent to target.
-func (app *NewOrder) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
+func (app *TradingSessionStatusRequest) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("-> Sending message to admin")
 
 	typ, err := message.MsgType()
@@ -87,28 +87,26 @@ func (app *NewOrder) ToAdmin(message *quickfix.Message, sessionID quickfix.Sessi
 }
 
 // Notification of admin message being received from target.
-func (app *NewOrder) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *TradingSessionStatusRequest) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from admin")
 
-	msgType, err := message.MsgType()
+	typ, err := message.MsgType()
 	if err != nil {
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
-	switch msgType {
-	case string(enum.MsgType_LOGON):
-	case string(enum.MsgType_LOGOUT):
-	default:
-		app.FromAdminChan <- message
+	switch typ {
+	case string(enum.MsgType_REJECT):
+		app.FromAppChan <- message
 	}
 
 	return nil
 }
 
 // Notification of app message being sent to target.
-func (app *NewOrder) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
+func (app *TradingSessionStatusRequest) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
 	app.Logger.Debug().Msgf("-> Sending message to app")
 
 	_, err := message.MsgType()
@@ -122,7 +120,7 @@ func (app *NewOrder) ToApp(message *quickfix.Message, sessionID quickfix.Session
 }
 
 // Notification of app message being received from target.
-func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *TradingSessionStatusRequest) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from app")
 
 	typ, err := message.MsgType()
@@ -133,7 +131,7 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
 	switch enum.MsgType(typ) {
-	case enum.MsgType_EXECUTION_REPORT:
+	case enum.MsgType_TRADING_SESSION_STATUS:
 		app.FromAppChan <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
